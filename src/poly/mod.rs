@@ -1,5 +1,6 @@
 use std::{
     fmt,
+    iter::FromIterator,
     ops::{Div, MulAssign},
 };
 
@@ -10,8 +11,15 @@ mod term;
 pub use term::{Term, Terms};
 
 #[derive(Debug)]
-pub struct Polynomial<T> {
+pub struct Polynomial<T = Box<[Term]>> {
     terms: T,
+}
+
+impl Polynomial {
+    #[inline]
+    pub fn builder() -> Builder {
+        Builder::default()
+    }
 }
 
 impl<T> Polynomial<T>
@@ -49,6 +57,11 @@ where
 
     pub fn combine(&mut self) -> Combine<T> {
         Combine { poly: self }
+    }
+
+    pub fn into_combined(mut self) -> Polynomial {
+        let terms = self.combine().collect::<Vec<_>>().into();
+        Polynomial::new(terms)
     }
 }
 
@@ -92,10 +105,22 @@ where
     T: Terms,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for term in self.terms().iter() {
-            write!(f, "{}", term)?;
+        let mut iter = self.terms().iter();
+        if let Some(first) = iter.next() {
+            write!(f, "{}", first)?;
+
+            for term in iter {
+                write!(f, " + {}", term)?;
+            }
         }
+
         Ok(())
+    }
+}
+
+impl FromIterator<Term> for Polynomial {
+    fn from_iter<T: IntoIterator<Item = Term>>(iter: T) -> Self {
+        Self::new(iter.into_iter().collect::<Vec<_>>().into())
     }
 }
 
@@ -121,13 +146,32 @@ where
             next.coefficient = 0;
 
             for term in iter {
-                acc.coefficient += term.coefficient;
-                term.coefficient = 0;
+                if term.exponents == acc.exponents {
+                    acc.coefficient += term.coefficient;
+                    term.coefficient = 0;
+                }
             }
-
             Some(acc)
         } else {
             None
         }
+    }
+}
+
+#[derive(Default)]
+pub struct Builder {
+    terms: Vec<Term>,
+}
+
+impl Builder {
+    #[inline]
+    pub fn term(mut self, term: Term) -> Self {
+        self.terms.push(term);
+        self
+    }
+
+    #[inline]
+    pub fn build(self) -> Polynomial {
+        Polynomial::new(self.terms.into())
     }
 }

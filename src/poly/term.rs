@@ -22,6 +22,15 @@ impl Term {
         }
     }
 
+    pub const fn coefficient(coefficient: i64) -> Self {
+        Self::new(coefficient, [0; 4])
+    }
+
+    pub fn exponent(mut self, index: usize, degree: u16) -> Self {
+        self.exponents[index] = degree;
+        self
+    }
+
     pub fn gcd(mut self, rhs: Self) -> Self {
         self.coefficient = gcd(self.coefficient, rhs.coefficient);
         for (a, b) in self.exponents.iter_mut().zip(rhs.exponents.iter().copied()) {
@@ -33,7 +42,7 @@ impl Term {
 
 impl Default for Term {
     fn default() -> Self {
-        Self::new(1, [0; 4])
+        Self::coefficient(1)
     }
 }
 
@@ -86,10 +95,13 @@ impl fmt::Display for Term {
 
         for (pos, exp) in self.exponents.iter().copied().enumerate() {
             if exp != 0 {
-                write!(f, "{}^{}", char::from((97 + pos) as u8), exp)?;
+                write!(f, "{}", char::from((97 + pos) as u8))?;
+
+                if exp > 1 {
+                    write!(f, "^{}", exp)?;
+                }
             }
         }
-
         Ok(())
     }
 }

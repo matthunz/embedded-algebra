@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::{Polynomial, Term, Terms};
+use super::{Polynomial, Terms};
 
 #[derive(Debug)]
 pub struct Fraction<T, U> {
