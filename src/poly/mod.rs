@@ -10,12 +10,12 @@ mod term;
 pub use term::Term;
 
 #[derive(Debug)]
-pub struct Polynomial {
-    terms: Vec<Term>,
+pub struct Polynomial<'t> {
+    terms: &'t mut [Term],
 }
 
-impl Polynomial {
-    pub fn new(terms: Vec<Term>) -> Self {
+impl<'t> Polynomial<'t> {
+    pub fn new(terms: &'t mut [Term]) -> Self {
         Self { terms }
     }
 
@@ -28,13 +28,24 @@ impl Polynomial {
             Term::default()
         }
     }
+
+    pub fn nonzero(&self) -> impl Iterator<Item = Term> + '_ {
+        self.terms
+            .iter()
+            .copied()
+            .filter(|term| term.coefficient > 0)
+    }
+
+    pub fn combine(self) -> Combine<'t> {
+        Combine { poly: self }
+    }
 }
 
-impl Div for Polynomial {
-    type Output = Fraction;
+impl<'n, 'd> Div<Polynomial<'d>> for Polynomial<'n> {
+    type Output = Fraction<'n, 'd>;
 
-    fn div(self, rhs: Self) -> Self::Output {
-        let mut frac = Fraction::new(self, rhs);
+    fn div(self, rhs: Polynomial<'d>) -> Self::Output {
+        let frac = Fraction::new(self, rhs);
         let gcd = frac.numerator.gcd().gcd(frac.denominator.gcd());
 
         for term in frac
@@ -49,7 +60,7 @@ impl Div for Polynomial {
     }
 }
 
-impl MulAssign for Polynomial {
+impl MulAssign for Polynomial<'_> {
     fn mul_assign(&mut self, rhs: Self) {
         let product: Term = rhs.terms.iter().copied().product();
         for term in self.terms.iter_mut() {
@@ -58,12 +69,41 @@ impl MulAssign for Polynomial {
     }
 }
 
-impl fmt::Display for Polynomial {
+impl fmt::Display for Polynomial<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for term in &self.terms {
+        for term in self.terms.iter() {
             write!(f, "{}", term)?;
         }
-
         Ok(())
+    }
+}
+
+pub struct Combine<'t> {
+    poly: Polynomial<'t>,
+}
+
+impl Iterator for Combine<'_> {
+    type Item = Term;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let mut iter = self
+            .poly
+            .terms
+            .iter_mut()
+            .filter(|term| term.coefficient > 0);
+
+        if let Some(next) = iter.next() {
+            let mut acc = *next;
+            next.coefficient = 0;
+
+            for term in iter {
+                acc.coefficient += term.coefficient;
+                term.coefficient = 0;
+            }
+
+            Some(acc)
+        } else {
+            None
+        }
     }
 }
