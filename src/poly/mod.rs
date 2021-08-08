@@ -7,21 +7,32 @@ mod frac;
 pub use frac::Fraction;
 
 mod term;
-pub use term::Term;
+pub use term::{Term, Terms};
 
 #[derive(Debug)]
-pub struct Polynomial<'t> {
-    terms: &'t mut [Term],
+pub struct Polynomial<T> {
+    terms: T,
 }
 
-impl<'t> Polynomial<'t> {
-    pub fn new(terms: &'t mut [Term]) -> Self {
+impl<T> Polynomial<T>
+where
+    T: Terms,
+{
+    pub fn new(terms: T) -> Self {
         Self { terms }
+    }
+
+    pub fn terms(&self) -> &[Term] {
+        self.terms.as_ref()
+    }
+
+    pub fn terms_mut(&mut self) -> &mut [Term] {
+        self.terms.as_mut()
     }
 
     #[inline]
     pub fn gcd(&self) -> Term {
-        let mut iter = self.terms.iter().copied();
+        let mut iter = self.terms().iter().copied();
         if let Some(init) = iter.next() {
             iter.fold(init, |acc, term| acc.gcd(term))
         } else {
@@ -30,29 +41,33 @@ impl<'t> Polynomial<'t> {
     }
 
     pub fn nonzero(&self) -> impl Iterator<Item = Term> + '_ {
-        self.terms
+        self.terms()
             .iter()
             .copied()
             .filter(|term| term.coefficient > 0)
     }
 
-    pub fn combine(self) -> Combine<'t> {
+    pub fn combine(&mut self) -> Combine<T> {
         Combine { poly: self }
     }
 }
 
-impl<'n, 'd> Div<Polynomial<'d>> for Polynomial<'n> {
-    type Output = Fraction<'n, 'd>;
+impl<T, U> Div<Polynomial<U>> for Polynomial<T>
+where
+    T: Terms,
+    U: Terms,
+{
+    type Output = Fraction<T, U>;
 
-    fn div(self, rhs: Polynomial<'d>) -> Self::Output {
-        let frac = Fraction::new(self, rhs);
+    fn div(self, rhs: Polynomial<U>) -> Self::Output {
+        let mut frac = Fraction::new(self, rhs);
         let gcd = frac.numerator.gcd().gcd(frac.denominator.gcd());
 
         for term in frac
             .numerator
-            .terms
+            .terms_mut()
             .iter_mut()
-            .chain(frac.denominator.terms.iter_mut())
+            .chain(frac.denominator.terms_mut().iter_mut())
         {
             *term /= gcd;
         }
@@ -60,35 +75,44 @@ impl<'n, 'd> Div<Polynomial<'d>> for Polynomial<'n> {
     }
 }
 
-impl MulAssign for Polynomial<'_> {
+impl<T> MulAssign for Polynomial<T>
+where
+    T: Terms,
+{
     fn mul_assign(&mut self, rhs: Self) {
-        let product: Term = rhs.terms.iter().copied().product();
-        for term in self.terms.iter_mut() {
+        let product: Term = rhs.terms().iter().copied().product();
+        for term in self.terms_mut().iter_mut() {
             *term *= product;
         }
     }
 }
 
-impl fmt::Display for Polynomial<'_> {
+impl<T> fmt::Display for Polynomial<T>
+where
+    T: Terms,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        for term in self.terms.iter() {
+        for term in self.terms().iter() {
             write!(f, "{}", term)?;
         }
         Ok(())
     }
 }
 
-pub struct Combine<'t> {
-    poly: Polynomial<'t>,
+pub struct Combine<'p, T> {
+    poly: &'p mut Polynomial<T>,
 }
 
-impl Iterator for Combine<'_> {
+impl<T> Iterator for Combine<'_, T>
+where
+    T: Terms,
+{
     type Item = Term;
 
     fn next(&mut self) -> Option<Self::Item> {
         let mut iter = self
             .poly
-            .terms
+            .terms_mut()
             .iter_mut()
             .filter(|term| term.coefficient > 0);
 

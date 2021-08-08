@@ -1,15 +1,15 @@
 use std::fmt;
 
-use super::Polynomial;
+use super::{Polynomial, Term, Terms};
 
 #[derive(Debug)]
-pub struct Fraction<'n, 'd> {
-    pub numerator: Polynomial<'n>,
-    pub denominator: Polynomial<'d>,
+pub struct Fraction<T, U> {
+    pub numerator: Polynomial<T>,
+    pub denominator: Polynomial<U>,
 }
 
-impl<'n, 'd> Fraction<'n, 'd> {
-    pub fn new(numerator: Polynomial<'n>, denominator: Polynomial<'d>) -> Self {
+impl<T, U> Fraction<T, U> {
+    pub fn new(numerator: Polynomial<T>, denominator: Polynomial<U>) -> Self {
         Self {
             numerator,
             denominator,
@@ -17,7 +17,11 @@ impl<'n, 'd> Fraction<'n, 'd> {
     }
 }
 
-impl fmt::Display for Fraction<'_, '_> {
+impl<T, U> fmt::Display for Fraction<T, U>
+where
+    T: Terms,
+    U: Terms,
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}) / ({})", self.numerator, self.denominator)
     }

@@ -4,6 +4,10 @@ use std::{
     ops::{DivAssign, Mul, MulAssign},
 };
 
+pub trait Terms: AsRef<[Term]> + AsMut<[Term]> {}
+
+impl<T> Terms for T where T: AsRef<[Term]> + AsMut<[Term]> + ?Sized {}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Term {
     pub coefficient: i64,
