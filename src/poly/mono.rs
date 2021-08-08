@@ -2,13 +2,16 @@ use std::{
     fmt,
     iter::Product,
     ops::{DivAssign, Mul, MulAssign},
+    str::FromStr,
 };
+
+use crate::parse::Parser;
 
 pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
 
 impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Monomial {
     pub coefficient: i64,
     pub exponents: [u16; 4],
@@ -31,7 +34,18 @@ impl Monomial {
         self
     }
 
+    /// Compute the greatest common divisor for this and another monomial
     pub fn gcd(mut self, rhs: Self) -> Self {
+        #[inline]
+        fn gcd(mut m: i64, mut n: i64) -> i64 {
+            while m != 0 {
+                let old_m = m;
+                m = n % m;
+                n = old_m;
+            }
+            n.abs()
+        }
+
         self.coefficient = gcd(self.coefficient, rhs.coefficient);
         for (a, b) in self.exponents.iter_mut().zip(rhs.exponents.iter().copied()) {
             *a = b.min(*a)
@@ -85,16 +99,6 @@ impl Product for Monomial {
     }
 }
 
-#[inline]
-fn gcd(mut m: i64, mut n: i64) -> i64 {
-    while m != 0 {
-        let old_m = m;
-        m = n % m;
-        n = old_m;
-    }
-    n.abs()
-}
-
 impl fmt::Display for Monomial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.coefficient)?;
@@ -109,5 +113,19 @@ impl fmt::Display for Monomial {
             }
         }
         Ok(())
+    }
+}
+
+impl FromStr for Monomial {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Parser::new(s).next().ok_or(())
+    }
+}
+
+impl From<&str> for Monomial {
+    fn from(s: &str) -> Self {
+        s.parse().unwrap()
     }
 }

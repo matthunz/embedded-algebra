@@ -1,19 +1,15 @@
+pub mod parse;
+
 pub mod poly;
-pub use poly::Polynomial;
+pub use poly::{Fraction, Monomial, Monomials, Polynomial};
 
 #[cfg(test)]
 mod tests {
-    use super::poly::*;
+use super::*;
 
     #[test]
     fn it_works() {
-        let a = Polynomial::builder()
-            .monomial(Monomial::from(4).exponent(0, 2))
-            .monomial(Monomial::from(2).exponent(1, 1))
-            .monomial(Monomial::from(2).exponent(0, 2))
-            .build();
-
-        println!("{}", &a);
-        println!("{}", a.into_combined());
+        let p = Polynomial::from("2a^2 + ab + 2ab");
+        println!("{}", p.into_combined());
     }
 }
