@@ -4,17 +4,17 @@ use std::{
     ops::{DivAssign, Mul, MulAssign},
 };
 
-pub trait Terms: AsRef<[Term]> + AsMut<[Term]> {}
+pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
 
-impl<T> Terms for T where T: AsRef<[Term]> + AsMut<[Term]> + ?Sized {}
+impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
 
 #[derive(Clone, Copy, Debug)]
-pub struct Term {
+pub struct Monomial {
     pub coefficient: i64,
     pub exponents: [u16; 4],
 }
 
-impl Term {
+impl Monomial {
     pub const fn new(coefficient: i64, exponents: [u16; 4]) -> Self {
         Self {
             coefficient,
@@ -40,13 +40,19 @@ impl Term {
     }
 }
 
-impl Default for Term {
+impl Default for Monomial {
     fn default() -> Self {
         Self::coefficient(1)
     }
 }
 
-impl DivAssign for Term {
+impl From<i64> for Monomial {
+    fn from(coefficient: i64) -> Self {
+        Self::coefficient(coefficient)
+    }
+}
+
+impl DivAssign for Monomial {
     fn div_assign(&mut self, rhs: Self) {
         self.coefficient /= rhs.coefficient;
         for (dest, src) in self.exponents.iter_mut().zip(rhs.exponents.iter()) {
@@ -55,7 +61,7 @@ impl DivAssign for Term {
     }
 }
 
-impl MulAssign for Term {
+impl MulAssign for Monomial {
     fn mul_assign(&mut self, rhs: Self) {
         self.coefficient *= rhs.coefficient;
         for (dest, src) in self.exponents.iter_mut().zip(rhs.exponents.iter()) {
@@ -64,7 +70,7 @@ impl MulAssign for Term {
     }
 }
 
-impl Mul for Term {
+impl Mul for Monomial {
     type Output = Self;
 
     fn mul(mut self, rhs: Self) -> Self::Output {
@@ -73,9 +79,9 @@ impl Mul for Term {
     }
 }
 
-impl Product for Term {
+impl Product for Monomial {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
-        iter.fold(Term::default(), |acc, term| acc * term)
+        iter.fold(Monomial::default(), |acc, monomial| acc * monomial)
     }
 }
 
@@ -89,7 +95,7 @@ fn gcd(mut m: i64, mut n: i64) -> i64 {
     n.abs()
 }
 
-impl fmt::Display for Term {
+impl fmt::Display for Monomial {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.coefficient)?;
 

@@ -8,9 +8,9 @@ mod tests {
     #[test]
     fn it_works() {
         let a = Polynomial::builder()
-            .term(Term::coefficient(4).exponent(0, 2))
-            .term(Term::coefficient(2).exponent(1, 1))
-            .term(Term::coefficient(2).exponent(0, 2))
+            .monomial(Monomial::from(4).exponent(0, 2))
+            .monomial(Monomial::from(2).exponent(1, 1))
+            .monomial(Monomial::from(2).exponent(0, 2))
             .build();
 
         println!("{}", &a);
