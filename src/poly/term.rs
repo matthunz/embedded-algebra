@@ -1,4 +1,5 @@
 use std::{
+    fmt,
     iter::Product,
     ops::{DivAssign, Mul, MulAssign},
 };
@@ -73,4 +74,18 @@ fn gcd(mut m: i64, mut n: i64) -> i64 {
         n = old_m;
     }
     n.abs()
+}
+
+impl fmt::Display for Term {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.coefficient)?;
+
+        for (pos, exp) in self.exponents.iter().copied().enumerate() {
+            if exp != 0 {
+                write!(f, "{}^{}", char::from((97 + pos) as u8), exp)?;
+            }
+        }
+
+        Ok(())
+    }
 }

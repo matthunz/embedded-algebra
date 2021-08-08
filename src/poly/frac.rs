@@ -1,3 +1,5 @@
+use std::fmt;
+
 use super::Polynomial;
 
 #[derive(Debug)]
@@ -12,5 +14,11 @@ impl Fraction {
             numerator,
             denominator,
         }
+    }
+}
+
+impl fmt::Display for Fraction {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "({}) / ({})", self.numerator, self.denominator)
     }
 }

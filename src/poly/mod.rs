@@ -1,4 +1,7 @@
-use std::ops::{Div, MulAssign};
+use std::{
+    fmt,
+    ops::{Div, MulAssign},
+};
 
 mod frac;
 pub use frac::Fraction;
@@ -13,7 +16,7 @@ pub struct Polynomial {
 
 impl Polynomial {
     pub fn new(terms: Vec<Term>) -> Self {
-       Self { terms} 
+        Self { terms }
     }
 
     #[inline]
@@ -52,5 +55,15 @@ impl MulAssign for Polynomial {
         for term in self.terms.iter_mut() {
             *term *= product;
         }
+    }
+}
+
+impl fmt::Display for Polynomial {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        for term in &self.terms {
+            write!(f, "{}", term)?;
+        }
+
+        Ok(())
     }
 }
