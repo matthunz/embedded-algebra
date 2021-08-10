@@ -1,16 +1,14 @@
-use crate::parse::Parser;
+use crate::{parse::Parser, Fraction, Gcd, Monomial};
 use std::{
     fmt,
     iter::FromIterator,
-    ops::{Div, MulAssign},
+    ops::{Div, DivAssign, MulAssign},
     str::FromStr,
 };
 
-mod frac;
-pub use frac::Fraction;
+pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
 
-mod mono;
-pub use mono::{Monomial, Monomials};
+impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
 
 #[derive(Debug)]
 pub struct Polynomial<T = Box<[Monomial]>> {
@@ -45,12 +43,12 @@ where
     /// use embedded_algebra::{Monomial, Polynomial};
     ///
     /// let poly = Polynomial::from("6a^2 + 4a");
-    /// let gcd = poly.gcd();
+    /// let gcf = poly.gcf();
     ///
-    /// assert_eq!(gcd, Monomial::from("2a"));
+    /// assert_eq!(gcf, Monomial::from("2a"));
     /// ```
     #[inline]
-    pub fn gcd(&self) -> Monomial {
+    pub fn gcf(&self) -> Monomial {
         let mut iter = self.monomials().iter().copied();
         if let Some(init) = iter.next() {
             iter.fold(init, |acc, monomial| acc.gcd(monomial))
@@ -86,6 +84,29 @@ where
     }
 }
 
+impl<T, U> Gcd<Polynomial<U>> for Polynomial<T>
+where
+    T: Monomials,
+    U: Monomials,
+{
+    type Output = Monomial;
+
+    fn gcd(&self, rhs: &Polynomial<U>) -> Self::Output {
+        self.gcd(&rhs.gcf())
+    }
+}
+
+impl<T> Gcd<Monomial> for Polynomial<T>
+where
+    T: Monomials,
+{
+    type Output = Monomial;
+
+    fn gcd(&self, rhs: &Monomial) -> Self::Output {
+        self.gcf().gcd(*rhs)
+    }
+}
+
 impl<T> PartialEq for Polynomial<T>
 where
     T: Monomials,
@@ -95,12 +116,23 @@ where
     }
 }
 
+impl<T> DivAssign<Monomial> for Polynomial<T>
+where
+    T: Monomials,
+{
+    fn div_assign(&mut self, rhs: Monomial) {
+        for term in self.monomials_mut().iter_mut() {
+            *term /= rhs;
+        }
+    }
+}
+
 impl<T, U> Div<Polynomial<U>> for Polynomial<T>
 where
     T: Monomials,
     U: Monomials,
 {
-    type Output = Fraction<T, U>;
+    type Output = Fraction<Self, Polynomial<U>>;
 
     fn div(self, rhs: Polynomial<U>) -> Self::Output {
         Fraction::new(self, rhs).into_simplified()

@@ -1,11 +1,23 @@
+mod frac;
+pub use frac::Fraction;
+
 pub mod parse;
 
+mod mono;
+pub use mono::Monomial;
+
 pub mod poly;
-pub use poly::{Fraction, Monomial, Monomials, Polynomial};
+pub use poly::{Monomials, Polynomial};
+
+pub trait Gcd<Rhs = Self> {
+    type Output;
+
+    fn gcd(&self, rhs: &Rhs) -> Self::Output;
+}
 
 #[cfg(test)]
 mod tests {
-use super::*;
+    use super::*;
 
     #[test]
     fn it_works() {

@@ -1,5 +1,3 @@
-use std::{iter::Peekable, str::Chars};
-
 use super::Monomial;
 
 mod items;
@@ -133,4 +131,3 @@ impl Iterator for Parser<'_> {
         }
     }
 }
-

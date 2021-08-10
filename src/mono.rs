@@ -1,13 +1,13 @@
+use crate::{
+    poly::{Monomials, Polynomial},
+    Gcd,
+};
 use std::{
     fmt::{self},
     iter::Product,
     ops::{DivAssign, Mul, MulAssign},
     str::{Chars, FromStr},
 };
-
-pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
-
-impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Monomial {
@@ -87,6 +87,40 @@ impl MulAssign for Monomial {
         for (dest, src) in self.exponents.iter_mut().zip(rhs.exponents.iter()) {
             *dest += src;
         }
+    }
+}
+
+impl Gcd for Monomial {
+    type Output = Self;
+
+    fn gcd(&self, rhs: &Self) -> Self::Output {
+        #[inline]
+        fn gcd(mut m: i64, mut n: i64) -> i64 {
+            while m != 0 {
+                let old_m = m;
+                m = n % m;
+                n = old_m;
+            }
+            n.abs()
+        }
+
+        let mut me = *self;
+        me.coefficient = gcd(self.coefficient, rhs.coefficient);
+        for (a, b) in me.exponents.iter_mut().zip(rhs.exponents.iter().copied()) {
+            *a = b.min(*a)
+        }
+        me
+    }
+}
+
+impl<T> Gcd<Polynomial<T>> for Monomial
+where
+    T: Monomials,
+{
+    type Output = Self;
+
+    fn gcd(&self, rhs: &Polynomial<T>) -> Self::Output {
+        rhs.gcd(self)
     }
 }
 
