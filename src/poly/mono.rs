@@ -1,11 +1,9 @@
 use std::{
-    fmt,
+    fmt::{self},
     iter::Product,
     ops::{DivAssign, Mul, MulAssign},
-    str::FromStr,
+    str::{Chars, FromStr},
 };
-
-use crate::parse::Parser;
 
 pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
 
@@ -35,6 +33,14 @@ impl Monomial {
     }
 
     /// Compute the greatest common divisor for this and another monomial
+    /// ```
+    /// use embedded_algebra::Monomial;
+    ///
+    /// let a = Monomial::from("6ab");
+    /// let b = Monomial::from("4a");
+    ///
+    /// assert_eq!(a.gcd(b), Monomial::from("2a"));
+    ///
     pub fn gcd(mut self, rhs: Self) -> Self {
         #[inline]
         fn gcd(mut m: i64, mut n: i64) -> i64 {
@@ -116,16 +122,108 @@ impl fmt::Display for Monomial {
     }
 }
 
-impl FromStr for Monomial {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        Parser::new(s).next().ok_or(())
-    }
-}
-
 impl From<&str> for Monomial {
     fn from(s: &str) -> Self {
         s.parse().unwrap()
     }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum OverflowError {
+    Coefficient,
+    Exponent,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum ParseError {
+    Empty,
+    Overflow(OverflowError),
+    Symbol,
+}
+
+impl FromStr for Monomial {
+    type Err = ParseError;
+
+    #[inline]
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut chars = s.chars();
+        let mut pos = 0;
+        let mut mono = Self::default();
+
+        match chars.next() {
+            Some('0'..='9') => {
+                pos += 1;
+                let (coeff, next) = parse_int(s, &mut chars, 0, &mut pos)
+                    .ok_or(ParseError::Overflow(OverflowError::Coefficient))?;
+                mono.coefficient = coeff;
+                match next {
+                    Some(c) => {
+                        return parse_vars(s, &mut chars, &mut pos, c, &mut mono).map(|()| mono)
+                    }
+                    None => Ok(mono),
+                }
+            }
+            Some(c) => parse_vars(s, &mut chars, &mut pos, c, &mut mono).map(|()| mono),
+            None => Err(ParseError::Empty),
+        }
+    }
+}
+
+#[inline]
+fn parse_vars(
+    s: &str,
+    chars: &mut Chars,
+    pos: &mut usize,
+    c: char,
+    mono: &mut Monomial,
+) -> Result<(), ParseError> {
+    let mut c = c;
+    loop {
+        let idx = (c as u8 - 97) as usize;
+        if idx > 4 {
+            return Err(ParseError::Symbol);
+        }
+        match chars.next() {
+            Some('^') => {
+                *pos += 2;
+                let (exp, next) = parse_int(s, chars, *pos, pos)
+                    .ok_or(ParseError::Overflow(OverflowError::Exponent))?;
+                mono.exponents[idx] = exp as _;
+                if let Some(next) = next {
+                    c = next;
+                } else {
+                    break;
+                }
+            }
+            Some(c2) => {
+                *pos += 1;
+                mono.exponents[idx] = 1;
+                c = c2;
+            }
+            None => {
+                mono.exponents[idx] = 1;
+                break;
+            }
+        }
+    }
+    Ok(())
+}
+
+#[inline]
+fn parse_int(
+    s: &str,
+    chars: &mut Chars,
+    start: usize,
+    pos: &mut usize,
+) -> Option<(i64, Option<char>)> {
+    let next = loop {
+        match chars.next() {
+            Some('0'..='9') => {
+                *pos += 1;
+            }
+            next => break next,
+        }
+    };
+    let int_str = &s[start..*pos];
+    int_str.parse().ok().map(|int| (int, next))
 }
