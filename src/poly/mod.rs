@@ -6,6 +6,12 @@ use std::{
     str::FromStr,
 };
 
+mod builder;
+pub use builder::Builder;
+
+mod combine;
+pub use combine::Combine;
+
 pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
 
 impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
@@ -65,8 +71,8 @@ where
     }
 
     /// Returns an iterator that outputs combined terms
-    pub fn combine(&mut self) -> Combine<T> {
-        Combine { poly: self }
+    pub fn combine(self) -> Combine<T> {
+        self.into()
     }
 
     /// Combine like terms into a new polynomial
@@ -78,7 +84,7 @@ where
     ///
     /// assert_eq!(combined, Polynomial::from("3a + 2a^2"));
     /// ```
-    pub fn into_combined(mut self) -> Polynomial {
+    pub fn into_combined(self) -> Polynomial {
         let monomials = self.combine().collect::<Vec<_>>().into();
         Polynomial::new(monomials)
     }
@@ -185,69 +191,5 @@ impl FromStr for Polynomial {
 impl From<&str> for Polynomial {
     fn from(s: &str) -> Self {
         s.parse().unwrap()
-    }
-}
-
-pub struct Combine<'p, T> {
-    poly: &'p mut Polynomial<T>,
-}
-
-impl<T> Iterator for Combine<'_, T>
-where
-    T: Monomials,
-{
-    type Item = Monomial;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let mut iter = self
-            .poly
-            .monomials_mut()
-            .iter_mut()
-            .filter(|monomial| monomial.coefficient > 0);
-
-        if let Some(next) = iter.next() {
-            let mut acc = *next;
-            next.coefficient = 0;
-
-            for monomial in iter {
-                if monomial.exponents == acc.exponents {
-                    acc.coefficient += monomial.coefficient;
-                    monomial.coefficient = 0;
-                }
-            }
-
-            Some(acc)
-        } else {
-            None
-        }
-    }
-}
-
-#[derive(Default)]
-pub struct Builder {
-    monomials: Vec<Monomial>,
-}
-
-impl Builder {
-    #[inline]
-    pub fn monomial<T>(mut self, monomial: T) -> Self
-    where
-        T: Into<Monomial>,
-    {
-        self.push(monomial);
-        self
-    }
-
-    #[inline]
-    pub fn push<T>(&mut self, monomial: T)
-    where
-        T: Into<Monomial>,
-    {
-        self.monomials.push(monomial.into());
-    }
-
-    #[inline]
-    pub fn build(self) -> Polynomial {
-        Polynomial::new(self.monomials.into())
     }
 }
