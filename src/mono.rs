@@ -1,7 +1,4 @@
-use crate::{
-    poly::{Monomials, Polynomial},
-    Gcd,
-};
+use crate::{Gcd, Polynomial};
 use std::{
     fmt::{self},
     iter::Product,
@@ -115,7 +112,7 @@ impl Gcd for Monomial {
 
 impl<T> Gcd<Polynomial<T>> for Monomial
 where
-    T: Monomials,
+    T: AsRef<[Monomial]>,
 {
     type Output = Self;
 

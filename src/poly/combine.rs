@@ -1,11 +1,14 @@
-use super::{Monomials, Polynomial};
+use super::Polynomial;
 use crate::Monomial;
 
 pub struct Combine<T> {
     poly: Polynomial<T>,
 }
 
-impl<T> From<Polynomial<T>> for Combine<T> {
+impl<T> From<Polynomial<T>> for Combine<T>
+where
+    T: AsMut<[Monomial]>,
+{
     fn from(poly: Polynomial<T>) -> Self {
         Self { poly }
     }
@@ -13,7 +16,7 @@ impl<T> From<Polynomial<T>> for Combine<T> {
 
 impl<T> Iterator for Combine<T>
 where
-    T: Monomials,
+    T: AsMut<[Monomial]>,
 {
     type Item = Monomial;
 

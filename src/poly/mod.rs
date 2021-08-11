@@ -12,10 +12,6 @@ pub use builder::Builder;
 mod combine;
 pub use combine::Combine;
 
-pub trait Monomials: AsRef<[Monomial]> + AsMut<[Monomial]> {}
-
-impl<T> Monomials for T where T: AsRef<[Monomial]> + AsMut<[Monomial]> + ?Sized {}
-
 #[derive(Debug)]
 pub struct Polynomial<T = Box<[Monomial]>> {
     monomials: T,
@@ -28,19 +24,22 @@ impl Polynomial {
     }
 }
 
-impl<T> Polynomial<T>
-where
-    T: Monomials,
-{
+impl<T> Polynomial<T> {
     pub fn new(monomials: T) -> Self {
         Self { monomials }
     }
 
-    pub fn monomials(&self) -> &[Monomial] {
+    pub fn monomials(&self) -> &[Monomial]
+    where
+        T: AsRef<[Monomial]>,
+    {
         self.monomials.as_ref()
     }
 
-    pub fn monomials_mut(&mut self) -> &mut [Monomial] {
+    pub fn monomials_mut(&mut self) -> &mut [Monomial]
+    where
+        T: AsMut<[Monomial]>,
+    {
         self.monomials.as_mut()
     }
 
@@ -54,7 +53,10 @@ where
     /// assert_eq!(gcf, Monomial::from("2a"));
     /// ```
     #[inline]
-    pub fn gcf(&self) -> Monomial {
+    pub fn gcf(&self) -> Monomial
+    where
+        T: AsRef<[Monomial]>,
+    {
         let mut iter = self.monomials().iter().copied();
         if let Some(init) = iter.next() {
             iter.fold(init, |acc, monomial| acc.gcd(monomial))
@@ -63,7 +65,10 @@ where
         }
     }
 
-    pub fn nonzero(&self) -> impl Iterator<Item = Monomial> + '_ {
+    pub fn nonzero(&self) -> impl Iterator<Item = Monomial> + '_
+    where
+        T: AsRef<[Monomial]>,
+    {
         self.monomials()
             .iter()
             .copied()
@@ -71,7 +76,10 @@ where
     }
 
     /// Returns an iterator that outputs combined terms
-    pub fn combine(self) -> Combine<T> {
+    pub fn combine(self) -> Combine<T>
+    where
+        T: AsMut<[Monomial]>,
+    {
         self.into()
     }
 
@@ -84,7 +92,10 @@ where
     ///
     /// assert_eq!(combined, Polynomial::from("3a + 2a^2"));
     /// ```
-    pub fn into_combined(self) -> Polynomial {
+    pub fn into_combined(self) -> Polynomial
+    where
+        T: AsMut<[Monomial]>,
+    {
         let monomials = self.combine().collect::<Vec<_>>().into();
         Polynomial::new(monomials)
     }
@@ -92,8 +103,8 @@ where
 
 impl<T, U> Gcd<Polynomial<U>> for Polynomial<T>
 where
-    T: Monomials,
-    U: Monomials,
+    T: AsRef<[Monomial]>,
+    U: AsRef<[Monomial]>,
 {
     type Output = Monomial;
 
@@ -104,7 +115,7 @@ where
 
 impl<T> Gcd<Monomial> for Polynomial<T>
 where
-    T: Monomials,
+    T: AsRef<[Monomial]>,
 {
     type Output = Monomial;
 
@@ -115,7 +126,7 @@ where
 
 impl<T> PartialEq for Polynomial<T>
 where
-    T: Monomials,
+    T: AsRef<[Monomial]>,
 {
     fn eq(&self, other: &Self) -> bool {
         self.monomials() == other.monomials()
@@ -124,7 +135,7 @@ where
 
 impl<T> DivAssign<Monomial> for Polynomial<T>
 where
-    T: Monomials,
+    T: AsMut<[Monomial]>,
 {
     fn div_assign(&mut self, rhs: Monomial) {
         for term in self.monomials_mut().iter_mut() {
@@ -135,8 +146,8 @@ where
 
 impl<T, U> Div<Polynomial<U>> for Polynomial<T>
 where
-    T: Monomials,
-    U: Monomials,
+    T: AsRef<[Monomial]> + AsMut<[Monomial]>,
+    U: AsRef<[Monomial]> + AsMut<[Monomial]>,
 {
     type Output = Fraction<Self, Polynomial<U>>;
 
@@ -147,7 +158,7 @@ where
 
 impl<T> MulAssign for Polynomial<T>
 where
-    T: Monomials,
+    T: AsRef<[Monomial]> + AsMut<[Monomial]>,
 {
     fn mul_assign(&mut self, rhs: Self) {
         let product: Monomial = rhs.monomials().iter().copied().product();
@@ -159,7 +170,7 @@ where
 
 impl<T> fmt::Display for Polynomial<T>
 where
-    T: Monomials,
+    T: AsRef<[Monomial]>,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let mut iter = self.monomials().iter();

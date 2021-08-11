@@ -7,7 +7,7 @@ mod mono;
 pub use mono::Monomial;
 
 pub mod poly;
-pub use poly::{Monomials, Polynomial};
+pub use poly::Polynomial;
 
 pub trait Gcd<Rhs = Self> {
     type Output;
